@@ -7,46 +7,41 @@ struct Args {
     brightness: i32,
 }
 
-use std::fs::{read, read_dir};
+use glob::glob;
+use std::fs::read_to_string;
 use std::process::Command;
 
 fn get_where() -> String {
-    read_dir("/sys/class/backlight")
-        .expect("this doesnt seem to be arch")
-        .nth(0)
-        .unwrap()
-        .unwrap()
-        .path()
-        .to_str()
-        .unwrap()
-        .to_string()
+    for entry in glob("/sys/class/backlight/*").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => return path.display().to_string(),
+            Err(err) => eprintln!("{:?}", err),
+        }
+    }
+    "".to_string()
 }
 
 fn read_max(location: &str) -> i32 {
-    use std::str;
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(format!("cat {location}"))
-        .output()
-        .expect("failed to get max brightness");
-    i32::from_str_radix(str::from_utf8(&output.stdout).unwrap().trim(), 10).unwrap()
+    let binding = read_to_string(location).unwrap();
+    let content = binding.trim();
+    i32::from_str_radix(content, 10).unwrap()
 }
 
 fn read_brightness(location: String) -> i32 {
-    use std::str;
     let location = location + "/max_brightness";
-    let content = read(&location).unwrap();
-    let content = str::from_utf8(&content).unwrap().trim();
+    let binding = read_to_string(&location).unwrap();
+    let content = binding.trim();
     let max = read_max(&location);
     (i32::from_str_radix(content, 10).unwrap() / max) * 100
 }
 
 fn get_max() -> i32 {
-    let location = get_where();
-    for entry in read_dir(location).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().to_str().unwrap().contains("max_brightness") {
-            return read_max(entry.path().to_str().unwrap());
+    for entry in glob(&(get_where() + "/max_brightness")).expect("failed to match glob pattern") {
+        match entry {
+            Ok(path) => {
+                return read_max(&path.display().to_string());
+            }
+            Err(err) => eprintln!("{:?}", err),
         }
     }
     0
