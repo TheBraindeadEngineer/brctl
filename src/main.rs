@@ -15,7 +15,7 @@ fn get_where() -> String {
     for entry in glob("/sys/class/backlight/*").expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => return path.display().to_string(),
-            Err(err) => eprintln!("{:?}", err),
+            Err(err) => eprintln!("{err:?}"),
         }
     }
     "".to_string()
@@ -24,7 +24,7 @@ fn get_where() -> String {
 fn read_max(location: &str) -> i32 {
     let binding = read_to_string(location).unwrap();
     let content = binding.trim();
-    i32::from_str_radix(content, 10).unwrap()
+    content.parse::<i32>().unwrap()
 }
 
 fn read_brightness(location: String) -> i32 {
@@ -32,7 +32,7 @@ fn read_brightness(location: String) -> i32 {
     let binding = read_to_string(&location).unwrap();
     let content = binding.trim();
     let max = read_max(&location);
-    (i32::from_str_radix(content, 10).unwrap() / max) * 100
+    (content.parse::<i32>().unwrap() / max) * 100
 }
 
 fn get_max() -> i32 {
@@ -41,7 +41,7 @@ fn get_max() -> i32 {
             Ok(path) => {
                 return read_max(&path.display().to_string());
             }
-            Err(err) => eprintln!("{:?}", err),
+            Err(err) => eprintln!("{err:?}"),
         }
     }
     0
